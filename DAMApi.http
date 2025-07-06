@@ -1,0 +1,6 @@
+@AnalyticsApi_HostAddress = http://localhost:5206
+
+GET {{AnalyticsApi_HostAddress}}/DAMAPI/
+Accept: application/json
+
+###
