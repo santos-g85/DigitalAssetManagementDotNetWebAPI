@@ -24,52 +24,46 @@ namespace DAMApi.Services.Implementation
         private readonly GoogleApiService _googleApiService = googleApiService;
         private readonly IFolderRepositroy _folderRepositroy= folderRepositroy;
 
-
-
-        public async Task<TokenResponseDto?> LoginAsync(UserLoginDto request)
+        public async Task<ServiceResult<TokenResponseDto?>> LoginAsync(UserLoginDto request)
         {
             var passwordhasher = new PasswordHasher<UserModel>();
             var validationresult =  await _loginValidator.ValidateAsync(request);
-            if(validationresult.IsValid)
+            if(!validationresult.IsValid)
             {
-                var result = await _userRepository.GetUsersByEmailIdAsync(request.Email);
-                if (result is not null)
-                {
-                    if (passwordhasher.VerifyHashedPassword(null, result.PasswordHash,
-                    request.Password) == PasswordVerificationResult.Failed)
-                    {
-                        return null;
-                    }
-                    return await _jWTService.CreateTokenResponseAsync(result); ;
-                }
-                return null;
+                _logger.LogWarning("login validation failed");
+                var errors = string.Join("; ", validationresult.Errors.Select(e => e.ErrorMessage));
+                return ServiceResult<TokenResponseDto?>.Failure($"login validation failure: {errors}", StatusCodes.Status400BadRequest);
             }
-            return null;
-            
+            var dbuser = await _userRepository.GetUsersByEmailIdAsync(request.Email);
+            if (dbuser is not null)
+            {
+                if (passwordhasher.VerifyHashedPassword(null, dbuser.PasswordHash,
+                request.Password) == PasswordVerificationResult.Failed)
+                {
+                    return ServiceResult<TokenResponseDto?>.Failure("password didn't match", StatusCodes.Status406NotAcceptable);
+                }
+                var tokenresult = await _jWTService.CreateTokenResponseAsync(dbuser);
+                return ServiceResult<TokenResponseDto?>.Success( tokenresult,"token generated successfully", StatusCodes.Status200OK);
+            }
+            return ServiceResult<TokenResponseDto?>.Failure("user doesnot exitst!",StatusCodes.Status404NotFound);
         }
 
-        public async Task<UserModel?> RegisterAsync(UserRegisterDto request)
+        public async Task<ServiceResult<UserModel?>> RegisterAsync(UserRegisterDto request)
         {
             var passwordHasher = new PasswordHasher<UserModel>();
             var validationResult = await _registerValidator.ValidateAsync(request);
 
             if (!validationResult.IsValid)
-            {
-                var problemDetails = new HttpValidationProblemDetails(validationResult.ToDictionary())
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "Validation Failed",
-                    Detail = "One or more validation errors occured",
-                    Instance = "/auth/register"
-                };
-                _logger.LogWarning("Validation failed: {Errors}", problemDetails);
-                return null;
+            { 
+               _logger.LogWarning(" login Validation failed");
+                var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
+                return ServiceResult<UserModel?>.Failure($"Validation failed: {errors}", 400);
             }
             var existingUser = await _userRepository.GetUsersByEmailIdAsync(request.Email);
             if (existingUser is not null)
             {
                 _logger.LogWarning("User already exists!");
-                return null;
+                return ServiceResult<UserModel?>.Failure("user already exists!",StatusCodes.Status400BadRequest);
             }
             var newUser = new UserModel
             {
@@ -83,23 +77,20 @@ namespace DAMApi.Services.Implementation
                 PasswordHash = passwordHasher.HashPassword(null, request.Password),
                 PhoneNumber = request.PhoneNumber.ToString()
             };
-
             var result = await _userRepository.AddUserAsync(newUser);
-
             if (result is null)
             {
                 _logger.LogWarning("User registration failed!");
-                return null;
+                return ServiceResult<UserModel?>.Failure("User registration failed!",StatusCodes.Status500InternalServerError);
             }
             FolderModel? folderresults = await FolderTreeCreation(result);
             _logger.LogInformation($"User with email {result.Email} registered successfully.");
-            return result;
+            return ServiceResult<UserModel?>.Success(result, $"user with email {result.Email} created!", StatusCodes.Status200OK);
         }
 
         private async Task<FolderModel?> FolderTreeCreation(UserModel? result)
         {
             var createfolder = await _googleApiService.CreateFolderTree(result.UserName!);
-
             var userFolderRecord = new FolderModel
             {
                 FolderName = createfolder.ToString(),

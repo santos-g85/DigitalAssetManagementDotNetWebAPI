@@ -30,24 +30,40 @@ namespace DAMApi.Controllers
             {
                 var result = await _authService.RegisterAsync(request);
 
-                if (result is null)
+                if (!result.IsSuccess)
                 {
-                    _logger.LogWarning("Registration failed. User already exists or invalid data.");
-                    return BadRequest(ApiResponse<object>.FailureResponse( "User already exists or invalid data.", StatusCodes.Status400BadRequest));
+                    _logger.LogWarning("Registration failed: {Message}", result.Message);
+                    return StatusCode(
+                        result.StatusCode,
+                        ApiResponse<object>.FailureResponse(
+                            result.Message ?? "Registration failed.",
+                            result.StatusCode
+                        )
+                    );
                 }
                 var usedata = new
                 {
-                    Email = result.Email,
-                    username = result.UserName,
+                    Email = result.Data?.Email,
+                    Username = result.Data?.UserName,
                 };
-                return Ok(ApiResponse<object>.SuccessResponse(usedata, "User registered successfully  and folder created!"));
+                return StatusCode(
+                    result.StatusCode,
+                    ApiResponse<object>.SuccessResponse(
+                        usedata,
+                        result.Message ?? "User registered successfully and folder created!"
+                    )
+                );
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while registering the user.");
-               return StatusCode(500,ApiResponse<object>.FailureResponse("Internal server error.", StatusCodes.Status500InternalServerError));
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    ApiResponse<object>.FailureResponse("Internal server error.", StatusCodes.Status500InternalServerError)
+                );
             }
         }
+
 
         [HttpPost("login")]
         public async Task<ActionResult<TokenResponseDto>> Login([FromBody] UserLoginDto request)
@@ -55,12 +71,16 @@ namespace DAMApi.Controllers
             try
             {
                 var result = await _authService.LoginAsync(request);
-                if (result is null)
+                if (!result.IsSuccess )
                 {
                     _logger.LogWarning("login failed. invalid data.");
-                    return BadRequest(ApiResponse<object>.FailureResponse("Invalid Creadential", StatusCodes.Status400BadRequest));
+                    return BadRequest(ApiResponse<object>.FailureResponse("Invalid Credetial", StatusCodes.Status400BadRequest));
                 }
-               return Ok(ApiResponse<object>.SuccessResponse(result, "User logged in successfully!"));
+                var tokens = new TokenResponseDto { 
+                    AccessToken = result.Data.AccessToken,
+                    RefreshToken = result.Data.RefreshToken
+                };
+                return Ok(ApiResponse<object>.SuccessResponse(tokens, "User logged in successfully!"));
             }
             catch (Exception ex)
             {
@@ -80,34 +100,15 @@ namespace DAMApi.Controllers
                     || result.RefreshToken is null)
                 {
                     _logger.LogWarning("Refresh token failed. Invalid data.");
-                    return Unauthorized("Invalid refresh token!");
+                    return Unauthorized(ApiResponse<TokenResponseDto>.FailureResponse("invalid credentails", StatusCodes.Status400BadRequest));
                 }
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while refreshing the token.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
+                return StatusCode(500,ApiResponse<TokenResponseDto>.FailureResponse($"{ex.Message}",StatusCodes.Status500InternalServerError));
             }
-        }
-
-        [Authorize]
-        [HttpGet("logout")]
-        public IActionResult Logout()
-        {
-            // Simulate a logout process
-            return Ok("Logout successful");
-        }
-
-
-        [Authorize(Roles ="Admin")]
-        [HttpGet("profile")]
-        public IActionResult GetUserProfile()
-        {
-            string username = "santos";
-            // Simulate fetching user profile
-            return Ok(username);
-
         }
     }
 }

@@ -6,8 +6,8 @@ namespace DAMApi.Services.Interfaces
 {
     public interface IAuthService
     {
-        Task<UserModel?> RegisterAsync(UserRegisterDto request);
-        Task<TokenResponseDto?> LoginAsync(UserLoginDto request);
+        Task<ServiceResult<UserModel?>> RegisterAsync(UserRegisterDto request);
+        Task<ServiceResult<TokenResponseDto?>> LoginAsync(UserLoginDto request);
 
     }
 }

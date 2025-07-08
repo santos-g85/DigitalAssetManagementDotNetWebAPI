@@ -60,7 +60,7 @@ namespace DAMApi.Repository.Implementation
             if (user == null)
             {
                 _Logger.LogWarning($"User with email {email} not found.");
-                return null;
+                return default;
             }
             return user;
         }
@@ -73,7 +73,7 @@ namespace DAMApi.Repository.Implementation
             if (user == null)
             {
                 _Logger.LogWarning($"Receiver with ID {id} not found.");
-                throw new KeyNotFoundException();
+                return default;
             }
             return user;
         }

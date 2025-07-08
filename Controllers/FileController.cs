@@ -43,7 +43,7 @@ namespace DAMApi.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing CSV file.");
-                return 
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error processing CSV file.");
             }
         }
 

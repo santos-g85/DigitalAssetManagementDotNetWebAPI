@@ -20,9 +20,9 @@ public class ApiResponse<T>
     }
 
     // Method to populate the response for success
-    public static ApiResponse<T> SuccessResponse(T data, string message = " ")
+    public static ApiResponse<T> SuccessResponse(T data, string message = " ", int statusCode=200)
     {
-        return new ApiResponse<T>(true, message, data,200);
+        return new ApiResponse<T>(true, message, data, statusCode);
     }
 
     // Method to populate the response for failure
