@@ -1,6 +1,5 @@
 ﻿using DAMApi.Models.Entities;
 using Microsoft.IdentityModel.Tokens;
-using static Org.BouncyCastle.Math.EC.ECCurve;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -8,6 +7,7 @@ using System.Security.Cryptography;
 using DAMApi.Repository.Interfaces;
 using DAMApi.Models.DTOs;
 using DAMApi.Services.Interfaces;
+using System.Threading.Tasks;
 
 namespace DAMApi.Services.Implementation
 {
@@ -15,21 +15,26 @@ namespace DAMApi.Services.Implementation
     {
         private readonly IConfiguration _config;
         private readonly IUserRepository _userRepository;
+        private readonly IFolderRepositroy _folderRepositroy;
         public JWTService(IConfiguration config,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            IFolderRepositroy folderRepositroy)
         {
             _config = config;
             _userRepository = userRepository;
+            _folderRepositroy = folderRepositroy;
         }
-        private string CreateToken(UserModel user)
+        private async Task<string> CreateToken(UserModel user)
         {
+            var userId = user.Id;
+            var folderName = await _folderRepositroy.GetFolderByUserId(userId);
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.UserName),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.UserRole.ToString()),
-                new Claim("User_Type", user.UserType.ToString())
             };
 
             // siging key
@@ -86,7 +91,7 @@ namespace DAMApi.Services.Implementation
         {
             return new TokenResponseDto
             {
-                AccessToken = CreateToken(result),
+                AccessToken = await CreateToken(result),
                 RefreshToken = await GenerateAndSaveRefreshTokenAsync(result)
             };
         }

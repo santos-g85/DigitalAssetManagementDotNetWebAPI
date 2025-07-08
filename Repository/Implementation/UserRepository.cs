@@ -1,6 +1,5 @@
 ﻿using DAMApi.DTOs;
 using DAMApi.Models.Entities;
-using DAMApi.Models.Enum;
 using DAMApi.Repository.Interfaces;
 using DAMApi.Settings;
 using MongoDB.Driver;
@@ -79,19 +78,6 @@ namespace DAMApi.Repository.Implementation
             return user;
         }
 
-        public async Task<List<UserModel>> GetusersByTypeAsync(UserType type)
-        {
-            var filter = Builders<UserModel>.Filter.Eq(r => r.UserType, type);
-            var users = await _Collection.Find(filter).ToListAsync();
-
-            if (users == null || !users.Any())
-            {
-                _Logger.LogWarning($"No receivers found for type {type}.");
-                return new List<UserModel>();
-            }
-            return users;
-        }
-
         public  async Task<UserModel> UpdateUserAsync(UserModel user)
         {
             if (user == null)
@@ -108,7 +94,6 @@ namespace DAMApi.Repository.Implementation
             }
 
             var update = Builders<UserModel>.Update
-                .Set(r => r.UserType, user.UserType)
                 .Set(r => r.FullName, user.FullName)
                 .Set(r => r.PhoneNumber, user.PhoneNumber)
                 .Set(r => r.Email, user.Email)

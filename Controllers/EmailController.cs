@@ -23,7 +23,7 @@ namespace DAMApi.Controllers
             _emailService.SendEmail(request);
             Response.StatusCode = StatusCodes.Status200OK;
             _logger.LogInformation("Email sent Successfully!");
-            return Ok("Email sent successfully!");
+            return Ok(ApiResponse<object>.SuccessResponse(null, "Email sent successfully!"));
         }
     }
 }

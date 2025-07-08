@@ -14,16 +14,13 @@ namespace DAMApi.Controllers
         private readonly ILogger<AuthController> _logger;
         private readonly IAuthService _authService;
         private readonly IJWTService _jWTService;
-        private readonly GoogleApiService _googleApiService;
         public AuthController(ILogger<AuthController> logger,
                               IAuthService authService,
-                              IJWTService jWTService,
-                              GoogleApiService googleApiService)
+                              IJWTService jWTService)
         {
             _logger = logger;
             _authService = authService;
             _jWTService = jWTService;
-            _googleApiService = googleApiService;
         }
 
         [HttpPost("register")]
@@ -36,15 +33,19 @@ namespace DAMApi.Controllers
                 if (result is null)
                 {
                     _logger.LogWarning("Registration failed. User already exists or invalid data.");
-                    return BadRequest("User already exists or invalid data.");
+                    return BadRequest(ApiResponse<object>.FailureResponse( "User already exists or invalid data.", StatusCodes.Status400BadRequest));
                 }
-                await _googleApiService.CreateFolderTree(result.UserName!);
-                return Ok(new { Message = "User registered successfully  and folder created!", UserId = result.Id });
+                var usedata = new
+                {
+                    Email = result.Email,
+                    username = result.UserName,
+                };
+                return Ok(ApiResponse<object>.SuccessResponse(usedata, "User registered successfully  and folder created!"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while registering the user.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
+               return StatusCode(500,ApiResponse<object>.FailureResponse("Internal server error.", StatusCodes.Status500InternalServerError));
             }
         }
 
@@ -54,18 +55,17 @@ namespace DAMApi.Controllers
             try
             {
                 var result = await _authService.LoginAsync(request);
-
                 if (result is null)
                 {
                     _logger.LogWarning("login failed. invalid data.");
-                    return BadRequest("invalid credential.");
+                    return BadRequest(ApiResponse<object>.FailureResponse("Invalid Creadential", StatusCodes.Status400BadRequest));
                 }
-                return Ok(result);
+               return Ok(ApiResponse<object>.SuccessResponse(result, "User logged in successfully!"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while loggin-in the user.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
+                return StatusCode(500, ApiResponse<object>.FailureResponse("Internal server error.", StatusCodes.Status500InternalServerError));
             }
         }
 

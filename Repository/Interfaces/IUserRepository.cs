@@ -1,6 +1,5 @@
 ﻿using DAMApi.DTOs;
 using DAMApi.Models.Entities;
-using DAMApi.Models.Enum;
 
 namespace DAMApi.Repository.Interfaces
 {
@@ -13,7 +12,6 @@ namespace DAMApi.Repository.Interfaces
 
         Task<UserModel> GetUsersByEmailIdAsync(string email);
         Task<List<UserModel>> GetAllUsersAsync();
-        Task<List<UserModel>> GetusersByTypeAsync(UserType type);
 
     }
 }

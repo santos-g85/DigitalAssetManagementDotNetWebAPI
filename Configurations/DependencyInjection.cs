@@ -42,6 +42,7 @@ public static class DependencyInjection
         // Register services
         services.AddScoped<GoogleApiService>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IFolderRepositroy ,FolderRepository>();
         services.AddScoped<IJWTService, JWTService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmailService, EmailService>();
